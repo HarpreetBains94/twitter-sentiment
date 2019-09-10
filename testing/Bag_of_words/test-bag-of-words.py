@@ -5,6 +5,7 @@ import pandas as pd
 import keras
 
 from tensorflow.python.keras.models import Sequential
+from tensorflow.python.keras.callbacks import Callback
 from tensorflow.python.keras.layers import Dense, GRU
 from tensorflow.python.keras.layers.embeddings import Embedding
 from tensorflow.python.keras.optimizers import Adam
@@ -17,10 +18,10 @@ sess = tf.Session(config=config)
 keras.backend.set_session(sess)
 
 max_tweet_length = 50
-vocab_size = 100000
+vocab_size = 50000
 
 # Set up training data
-trainData = pd.read_csv('training-data.csv', sep=',', encoding='latin-1')
+trainData = pd.read_csv('../training-data.csv', sep=',', encoding='latin-1')
 train_y = trainData['val'].values
 train_x_raw = trainData['tweet'].values
 tokenizer = Tokenizer(filters='!"£$%^&*()-_=+,<.>/?:;@#~[{]}\|`¬')
@@ -28,7 +29,7 @@ tokenizer.fit_on_texts(train_x_raw)
 train_x = pad_sequences(tokenizer.texts_to_sequences(train_x_raw), maxlen=max_tweet_length, padding='pre', truncating='pre')
 
 # Set up test 
-testData = pd.read_csv('test-data.csv', sep=',', encoding='latin-1')
+testData = pd.read_csv('../test-data.csv', sep=',', encoding='latin-1')
 test_y = testData['val'].values
 test_x_raw = testData['tweet'].values
 test_x = pad_sequences(tokenizer.texts_to_sequences(test_x_raw), maxlen=max_tweet_length, padding='pre', truncating='pre')
@@ -51,7 +52,14 @@ optimizer = Adam(lr=1e-3)
 model.compile(loss='binary_crossentropy', optimizer=optimizer, metrics=['accuracy'])
 
 # Train
-model.fit(train_x, train_y, validation_split=0.05, epochs=50, batch_size=512)
+model.fit(
+    train_x,
+    train_y,
+    validation_split=0.05,
+    epochs=50,
+    batch_size=1024,
+    callbacks=[EpochTestCallback((test_x, test_y))]
+)
 
 # Test
 result = model.evaluate(test_x, test_y)

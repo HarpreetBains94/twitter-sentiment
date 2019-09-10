@@ -21,12 +21,18 @@ max_tweet_length = 50
 vocab_size = 50000
 
 # Fetch pre trained vecotrs
-word2vec_model = gensim.models.KeyedVectors.load_word2vec_format('GoogleNews-vectors-negative300.bin', binary=True)
+f = open('glove.42B.300d.txt','r')
+model = {}
+for line in f:
+        splitLine = line.split()
+        word = splitLine[0]
+        embedding = np.array([float(val) for val in splitLine[1:]])
+        model[word] = embedding
 
 # Set up training data
-trainData = pd.read_csv('training-data.csv', sep=',', encoding='latin-1')
-train_y = trainData['val'].values
-train_x_raw = trainData['tweet'].values
+train_data = pd.read_csv('../training-data.csv', sep=',', encoding='latin-1')
+train_y = train_data['val'].values
+train_x_raw = train_data['tweet'].values
 tokenizer = Tokenizer(filters='!"£$%^&*()-_=+,<.>/?:;@#~[{]}\|`¬')
 tokenizer.fit_on_texts(train_x_raw)
 word_index = tokenizer.word_index
@@ -34,29 +40,29 @@ word_index_length = len(word_index) + 1
 train_x = pad_sequences(tokenizer.texts_to_sequences(train_x_raw), maxlen=max_tweet_length, padding='pre', truncating='pre')
 
 # Set up test data
-testData = pd.read_csv('test-data.csv', sep=',', encoding='latin-1')
-test_y = testData['val'].values
-test_x_raw = testData['tweet'].values
+test_data = pd.read_csv('../test-data.csv', sep=',', encoding='latin-1')
+test_y = test_data['val'].values
+test_x_raw = test_data['tweet'].values
 test_x = pad_sequences(tokenizer.texts_to_sequences(test_x_raw), maxlen=max_tweet_length, padding='pre', truncating='pre')
 
 # Set up embedding matrix
 embedding_matrix = np.zeros((word_index_length, 300))
 for word, i in word_index.items():
     try:
-        embedding_vector = word2vec_model.get_vector(word)
+        embedding_vector = model[word]
         if embedding_vector is not None:
             embedding_matrix[i] = embedding_vector
     except:
         pass
-embedding_matrix = embedding_matrix[: vocab_size]
+embedding_matrix = embedding_matrix[:vocab_size]
 
 # Free up memory
 del tokenizer
 del word_index
-del word2vec_model
-del trainData
+del model
+del train_data
 del train_x_raw
-del testData
+del test_data
 del test_x_raw
 
 # Set up network
